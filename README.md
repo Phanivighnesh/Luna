@@ -18,7 +18,6 @@ Built as a hackathon MVP and since extended with scheduling, email reminders, LL
 - [Configuration](#configuration)
 - [Design Decisions](#design-decisions)
 - [Known Limitations](#known-limitations)
-- [Roadmap](#roadmap)
 - [Troubleshooting](#troubleshooting)
 
 ---
