@@ -190,13 +190,6 @@ Every action that touches your system shows a confirmation dialog before running
 - The packaged `.exe` bundles only the Electron shell; Ollama and the Python backend must be started separately.
 - Web search depends on scraping DuckDuckGo's HTML/lite endpoints (no official API), which can change or start blocking requests without notice.
 
-## Roadmap
-
-- [ ] Browser search automation — open the actual browser to a live results page
-- [ ] MCP (Model Context Protocol) client architecture, replacing hand-written per-tool wrappers with standardized tool servers
-- [ ] WhatsApp messaging via WhatsApp Web automation (personal-use only — no official API exists for this use case; voice calling automation is out of scope entirely)
-- [ ] Bundle the Python backend into the packaged executable
-
 ## Troubleshooting
 
 **`ModuleNotFoundError` after installing requirements** — you likely installed into a different Python environment than the one running uvicorn. Activate the same environment for both steps.
