@@ -1,0 +1,30 @@
+{
+  "name": "luna-desktop",
+  "version": "0.1.0",
+  "author": "Phani Vighnesh",
+  "description": "Luna - local-first AI desktop assistant",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.luna.assistant",
+    "productName": "Luna",
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**/*"
+    ]
+  }
+}

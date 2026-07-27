@@ -1,0 +1,33 @@
+# --- Python / backend ---
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+env/
+*.egg-info/
+
+# Local SQLite DB — this is where the email app password and all personal
+# schedule/memory data actually live. NEVER commit this.
+backend/db/
+
+# --- Node / Electron / frontend ---
+node_modules/
+frontend/dist/
+frontend/dist_electron/
+frontend/out/
+npm-debug.log*
+
+# --- OS junk ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Editor ---
+.vscode/
+.idea/
+*.swp
+
+# --- Misc ---
+*.log
+.env

@@ -1,0 +1,155 @@
+/* ---- Error banner ---- */
+.error-banner {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+  background: #3a1a1a; color: #ffb3b3; padding: 12px 20px;
+  font-size: 13px; display: flex; align-items: center; gap: 14px;
+  border-bottom: 1px solid #5c2a2a;
+}
+.error-banner.hidden { display: none; }
+.error-banner code { background: #241010; padding: 2px 6px; border-radius: 4px; }
+.error-banner button {
+  margin-left: auto; padding: 6px 14px; border-radius: 6px; border: 1px solid #ffb3b3;
+  background: transparent; color: #ffb3b3; cursor: pointer;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: #0f1115;
+  color: #e8e8ec;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.view { display: none; height: 100vh; }
+.view.active { display: flex; }
+
+/* ---- Onboarding ---- */
+#view-onboarding.active {
+  align-items: center;
+  justify-content: center;
+}
+.onboard-card {
+  width: 380px;
+  padding: 32px;
+  background: #1a1d24;
+  border-radius: 16px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+}
+.onboard-card h1 { margin: 0 0 8px; font-size: 28px; }
+.subtitle { color: #9a9ba5; font-size: 14px; margin-bottom: 24px; }
+.onboard-card label, #tab-settings label {
+  display: block; font-size: 13px; color: #9a9ba5; margin: 14px 0 6px;
+}
+.onboard-card input, .onboard-card select,
+#tab-settings input, #tab-settings select,
+.composer input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #2c2f38;
+  background: #12141a;
+  color: #e8e8ec;
+  font-size: 14px;
+}
+.primary-btn {
+  margin-top: 20px;
+  width: 100%;
+  padding: 11px;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #7c5cff, #5c8bff);
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 14px;
+}
+.primary-btn:hover { opacity: 0.9; }
+.secondary-btn {
+  padding: 10px 16px; border-radius: 8px; border: 1px solid #3a3d47;
+  background: transparent; color: #e8e8ec; cursor: pointer;
+}
+.danger-btn {
+  margin-top: 16px; padding: 10px 16px; border-radius: 8px; border: none;
+  background: #ff5c5c; color: white; cursor: pointer; font-weight: 600;
+}
+
+/* ---- App layout ---- */
+#view-app.active { flex-direction: row; }
+.sidebar {
+  width: 200px;
+  background: #14161c;
+  padding: 16px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-right: 1px solid #22242c;
+}
+.brand { font-weight: 700; font-size: 18px; padding: 8px 10px 18px; }
+.nav-btn {
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: #c7c8d1;
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.nav-btn:hover { background: #1e2129; }
+.nav-btn.active { background: #262a35; color: white; }
+
+.content { flex: 1; display: flex; flex-direction: column; padding: 20px; overflow-y: auto; }
+.tab { display: none; flex-direction: column; height: 100%; }
+.tab.active { display: flex; }
+
+/* ---- Chat ---- */
+.messages { flex: 1; overflow-y: auto; padding-bottom: 10px; }
+.msg { max-width: 70%; padding: 10px 14px; border-radius: 12px; margin: 6px 0; font-size: 14px; line-height: 1.4; white-space: pre-wrap; }
+.msg.user { margin-left: auto; background: #4a4dff; color: white; }
+.msg.assistant { margin-right: auto; background: #1e2129; }
+.msg.system { margin: 0 auto; background: transparent; color: #9a9ba5; font-style: italic; }
+.composer { display: flex; gap: 10px; }
+.composer input { flex: 1; }
+.composer button { width: auto; padding: 10px 20px; margin-top: 0; }
+
+/* ---- Schedule ---- */
+.schedule-add { display: flex; gap: 10px; margin-bottom: 16px; }
+.schedule-add input { flex: 1; padding: 10px 12px; border-radius: 8px; border: 1px solid #2c2f38; background: #12141a; color: #e8e8ec; font-size: 14px; }
+
+/* ---- Memory / Privacy ---- */
+.hint { color: #9a9ba5; font-size: 13px; margin-bottom: 16px; }
+.memory-list, .activity-list { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
+.memory-item, .activity-item {
+  background: #1a1d24; padding: 10px 14px; border-radius: 8px;
+  display: flex; justify-content: space-between; align-items: center; font-size: 13px;
+}
+.memory-item button {
+  background: transparent; border: 1px solid #3a3d47; color: #ff8080;
+  border-radius: 6px; padding: 4px 10px; cursor: pointer;
+}
+
+/* ---- Modal ---- */
+.modal {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+  display: flex; align-items: center; justify-content: center;
+}
+.modal.hidden { display: none; }
+.modal-card {
+  background: #1a1d24; padding: 24px; border-radius: 12px; width: 320px;
+}
+.modal-actions { display: flex; gap: 10px; margin-top: 18px; }
+.modal-actions button { flex: 1; margin-top: 0; }
+
+/* Light theme override */
+body.theme-light { background: #f5f5f7; color: #1a1a1a; }
+body.theme-light .onboard-card,
+body.theme-light .sidebar,
+body.theme-light .msg.assistant,
+body.theme-light .memory-item,
+body.theme-light .activity-item,
+body.theme-light .modal-card { background: #ffffff; color: #1a1a1a; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+body.theme-light .onboard-card input, body.theme-light .onboard-card select,
+body.theme-light #tab-settings input, body.theme-light #tab-settings select,
+body.theme-light .composer input { background: #f0f0f3; color: #1a1a1a; }

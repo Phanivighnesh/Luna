@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Luna</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div id="backend-error-banner" class="error-banner hidden">
+  ⚠️ Can't reach the Luna backend at localhost:8000. Make sure <code>uvicorn app:app --reload --port 8000</code>
+  is running (and that all packages in requirements.txt are installed in that environment).
+  <button id="retry-connection-btn">Retry</button>
+</div>
+
+<!-- ONBOARDING -->
+<section id="view-onboarding" class="view active">
+  <div class="onboard-card">
+    <h1>Meet Luna</h1>
+    <p class="subtitle">A private AI assistant that lives on your computer. Chats, memory, and tasks all run locally — nothing leaves your machine unless you say so.</p>
+
+    <label>Your name</label>
+    <input id="ob-username" type="text" placeholder="e.g. Alex" />
+
+    <label>Assistant name</label>
+    <input id="ob-assistantname" type="text" placeholder="e.g. Luna" value="Luna" />
+
+    <label>Theme</label>
+    <select id="ob-theme">
+      <option value="dark">Dark</option>
+      <option value="light">Light</option>
+    </select>
+
+    <button id="ob-continue" class="primary-btn">Get Started</button>
+  </div>
+</section>
+
+<!-- MAIN APP -->
+<section id="view-app" class="view">
+  <nav class="sidebar">
+    <div class="brand" id="brand-name">Luna</div>
+    <button class="nav-btn active" data-tab="chat">💬 Chat</button>
+    <button class="nav-btn" data-tab="schedule">📅 Schedule</button>
+    <button class="nav-btn" data-tab="memory">🧠 Memory</button>
+    <button class="nav-btn" data-tab="privacy">🔒 Privacy</button>
+    <button class="nav-btn" data-tab="settings">⚙️ Settings</button>
+    <button id="new-chat-btn" class="nav-btn">➕ New Chat</button>
+  </nav>
+
+  <main class="content">
+
+    <!-- CHAT TAB -->
+    <div class="tab active" id="tab-chat">
+      <div id="messages" class="messages"></div>
+      <div class="composer">
+        <input id="chat-input" type="text" placeholder="Ask Luna anything, or say 'open Spotify', 'find my resume'..." />
+        <button id="send-btn" class="primary-btn">Send</button>
+      </div>
+    </div>
+
+    <!-- SCHEDULE TAB -->
+    <div class="tab" id="tab-schedule">
+      <h2>Your Schedule</h2>
+      <p class="hint">Reminders are emailed 5 minutes before they're due (configure your email in Settings first).</p>
+      <div class="schedule-add">
+        <input id="sched-title" type="text" placeholder="Task, e.g. Team meeting" />
+        <input id="sched-time" type="text" placeholder="Time, e.g. 5:00 PM or tomorrow 9am" />
+        <button id="sched-add-btn" class="primary-btn" style="margin-top:0;width:auto;padding:10px 18px;">Add</button>
+      </div>
+      <div id="schedule-list" class="memory-list"></div>
+    </div>
+
+    <!-- MEMORY TAB -->
+    <div class="tab" id="tab-memory">
+      <h2>What Luna Remembers</h2>
+      <p class="hint">Everything here is stored locally in a SQLite file on your machine. You can remove any of it at any time.</p>
+      <div id="memory-list" class="memory-list"></div>
+    </div>
+
+    <!-- PRIVACY TAB -->
+    <div class="tab" id="tab-privacy">
+      <h2>Privacy Dashboard</h2>
+      <p class="hint">A log of what Luna has done and accessed.</p>
+      <div id="activity-list" class="activity-list"></div>
+      <button id="delete-all-btn" class="danger-btn">Delete All My Data</button>
+    </div>
+
+    <!-- SETTINGS TAB -->
+    <div class="tab" id="tab-settings">
+      <h2>Settings</h2>
+      <label>Assistant name</label>
+      <input id="settings-assistantname" type="text" />
+      <label>Theme</label>
+      <select id="settings-theme">
+        <option value="dark">Dark</option>
+        <option value="light">Light</option>
+      </select>
+      <label>Response length</label>
+      <select id="settings-length">
+        <option value="short">Short</option>
+        <option value="normal" selected>Normal</option>
+        <option value="detailed">Detailed</option>
+      </select>
+
+      <h3 style="margin-top:24px;">Email Reminders</h3>
+      <p class="hint">For Gmail, use an <b>App Password</b> (myaccount.google.com/apppasswords), not your real password. Stored locally in plaintext for this prototype.</p>
+      <label>Your email (sending account)</label>
+      <input id="settings-smtp-email" type="text" placeholder="you@gmail.com" />
+      <label>App password</label>
+      <input id="settings-smtp-password" type="password" placeholder="16-character app password" />
+      <label>Send reminders to</label>
+      <input id="settings-notify-email" type="text" placeholder="Defaults to the address above" />
+      <button id="test-email-btn" class="secondary-btn" style="width:100%; margin-top:10px;">Send Test Email</button>
+
+      <button id="settings-save-btn" class="primary-btn">Save Settings</button>
+    </div>
+
+  </main>
+</section>
+
+<!-- PERMISSION / CONFIRMATION MODAL -->
+<div id="confirm-modal" class="modal hidden">
+  <div class="modal-card">
+    <h3>Luna wants to:</h3>
+    <p id="confirm-description"></p>
+    <div class="modal-actions">
+      <button id="confirm-deny" class="secondary-btn">Deny</button>
+      <button id="confirm-allow" class="primary-btn">Allow</button>
+    </div>
+  </div>
+</div>
+
+<script src="renderer.js"></script>
+</body>
+</html>
