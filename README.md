@@ -1,207 +1,206 @@
-# Luna — Local AI Desktop Assistant
+# Luna — Local-First AI Desktop Assistant
 
-A working prototype: Electron chat UI + Python (FastAPI) backend + local LLM via Ollama.
-Everything runs on your machine; no cloud calls anywhere in this code.
+Luna is a privacy-first desktop AI assistant that runs almost entirely on your own machine. Chat, task automation, scheduling, and voice all run locally through an open-source LLM served by [Ollama](https://ollama.com) — the only thing that ever leaves your computer is an optional live web search.
 
-## What's included
+Built as a hackathon MVP and since extended with scheduling, email reminders, LLM-generated plans, and a local voice interface.
+
+---
+
+## Table of Contents
+
+- [Why Luna](#why-luna)
+- [Features](#features)
+- [Architecture](#architecture)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Setup](#setup)
+- [Usage](#usage)
+- [Configuration](#configuration)
+- [Design Decisions](#design-decisions)
+- [Known Limitations](#known-limitations)
+- [Roadmap](#roadmap)
+- [Troubleshooting](#troubleshooting)
+
+---
+
+## Why Luna
+
+Most AI assistants are cloud-first: your conversations, your schedule, your files all pass through someone else's servers. Luna inverts that — the LLM runs locally via Ollama, all personal data lives in a local SQLite file, and every action that touches your system (opening an app, reading files) requires explicit, per-action confirmation. The one deliberate exception is live web search, since no local model can know today's information — and even that goes through the same confirmation gate as everything else.
+
+## Features
+
+**Chat**
+- Streaming conversation with a local LLM (Phi-3-mini via Ollama)
+- Per-conversation history, stored locally in SQLite
+- Optional voice input/output — fully local speech-to-text and text-to-speech
+
+**Task Automation** (rule-based intent detection, confirmed before executing)
+- Open applications
+- Search local files
+- Create notes
+- Schedule reminders — absolute ("at 5pm") or relative ("in 10 minutes")
+- Mark schedule items done, by voice or text, with fuzzy title matching
+- Ask what's on the schedule, or what's already been completed — answered from the real database, never guessed by the LLM
+- Ask the current time, anywhere — computed locally, never hallucinated
+- Web search — the one action that reaches the internet, clearly labeled as such
+
+**Automated Reminders**
+- A background job checks the schedule every 60 seconds and emails a reminder 5 minutes before anything is due, via SMTP
+- A "Send Test Email" button in Settings gives immediate config feedback instead of waiting on the background cycle
+
+**AI-Generated Plans**
+- "Create a plan for learning FastAPI and add it to my schedule" — the LLM is constrained to return structured JSON, which the backend parses and inserts as real schedule rows (not just a wall of text)
+
+**Memory & Privacy**
+- All preferences and history stored locally in SQLite
+- Memory dashboard: view and delete individual stored items
+- Privacy dashboard: full activity log, plus one-click "Delete All My Data"
+
+**Voice**
+- Push-to-talk microphone input, transcribed locally (faster-whisper)
+- Optional spoken replies (pyttsx3 / Windows SAPI5)
+
+## Architecture
+
+```
+┌─────────────────────┐        HTTP (localhost:8000)        ┌──────────────────────┐
+│   Electron Frontend  │ ───────────────────────────────────▶│   FastAPI Backend     │
+│  (chat, schedule,    │◀─────────────────────────────────── │  (intent detection,   │
+│   memory, settings)  │        streamed / JSON responses     │   task execution)     │
+└─────────────────────┘                                      └──────────┬────────────┘
+                                                                          │
+                                   ┌──────────────────────────────────────┼───────────────────────┐
+                                   ▼                                     ▼                        ▼
+                          ┌────────────────┐                  ┌──────────────────┐      ┌──────────────────┐
+                          │  Ollama (LLM)   │                  │  SQLite (memory,  │      │  DuckDuckGo /     │
+                          │  localhost:11434│                  │  schedule, log)   │      │  SMTP / Whisper   │
+                          └────────────────┘                  └──────────────────┘      └──────────────────┘
+```
+
+Every user message is checked against a rule-based intent matcher *before* it reaches the LLM. Deterministic, factual requests (time, schedule contents, marking things done) are answered directly from real data — the LLM is only used for open-ended conversation and for generating structured plans, and even then its output is validated before anything is executed.
+
+## Tech Stack
+
+| Layer | Choice | Why |
+|---|---|---|
+| Desktop shell | Electron | Fastest path to a packaged Windows `.exe` |
+| Backend | Python + FastAPI | Async support for streaming + background jobs |
+| Local LLM | Phi-3-mini via Ollama | Runs on CPU-only, 8GB RAM hardware; no PyTorch/GPU dependency |
+| Storage | SQLite | Zero-config, single-file, fully local |
+| Scheduling | APScheduler | In-process background job, no external service |
+| Speech-to-text | faster-whisper | CTranslate2-based, lighter than openai-whisper (no PyTorch) |
+| Text-to-speech | pyttsx3 | Drives Windows' built-in SAPI5 voices, no model download |
+| Web search | DuckDuckGo HTML/lite endpoints | No API key required |
+
+## Project Structure
 
 ```
 luna/
 ├── backend/
-│   ├── app.py           # FastAPI server (chat, memory, tasks, activity log)
-│   ├── ai.py            # Ollama streaming wrapper
-│   ├── memory.py        # SQLite: preferences, conversations, activity log
-│   ├── tasks.py         # Intent detection + safe task execution
+│   ├── app.py              # FastAPI routes: chat, tasks, memory, schedule, voice
+│   ├── ai.py                # Ollama streaming + non-streaming completion wrapper
+│   ├── tasks.py              # Intent detection (regex-based) + task execution
+│   ├── schedule_store.py     # SQLite schedule table (add/list/mark done)
+│   ├── memory.py             # SQLite: preferences, conversations, activity log
+│   ├── mailer.py             # SMTP reminder emails
+│   ├── reminder_job.py       # Background scheduler — checks due items every 60s
+│   ├── web_search.py         # DuckDuckGo scraper with redirect-URL decoding
+│   ├── plan_generator.py     # LLM → structured JSON → real schedule rows
+│   ├── voice.py              # faster-whisper STT + pyttsx3 TTS
 │   └── requirements.txt
 └── frontend/
-    ├── main.js           # Electron main process
+    ├── main.js                # Electron main process
     ├── preload.js
-    ├── package.json
     └── renderer/
-        ├── index.html    # Onboarding, chat, memory, privacy, settings views
-        ├── style.css
-        └── renderer.js
+        ├── index.html          # Onboarding, chat, schedule, memory, privacy, settings
+        ├── renderer.js          # All UI logic, including voice recording
+        └── style.css
 ```
 
-## 1. Install & run the local model (Ollama)
+## Setup
 
+### 1. Install and run Ollama
 ```bash
-# Install from https://ollama.com/download
+# https://ollama.com/download
 ollama pull phi3:mini
 ollama serve
 ```
-Leave this running in a terminal. Default endpoint: `http://localhost:11434`.
 
-Not certain of exact speed on your specific CPU — test with `ollama run phi3:mini` first.
-If it's too slow, swap to a smaller model (e.g. `ollama pull gemma:2b`) and change
-`DEFAULT_MODEL` in `backend/ai.py`.
-
-## 2. Run the backend
-
+### 2. Backend
 ```bash
 cd backend
 python -m venv venv
-# Windows:
-venv\Scripts\activate
-# macOS/Linux:
-source venv/bin/activate
-
+venv\Scripts\activate        # Windows
 pip install -r requirements.txt
 uvicorn app:app --reload --port 8000
 ```
+Verify: open `http://127.0.0.1:8000/health` — should return `{"backend":"ok","ollama_running":true}`.
 
-Check it's alive: open `http://localhost:8000/health` in a browser —
-you should see `{"backend":"ok","ollama_running":true}`.
+**Voice feature requires `ffmpeg` on your PATH** (not installed by pip):
+```powershell
+winget install ffmpeg
+```
 
-## 3. Run the frontend (development mode)
-
+### 3. Frontend
 ```bash
 cd frontend
 npm install
 npm start
 ```
 
-This opens the Electron window. Both the backend (port 8000) and Ollama
-(port 11434) must already be running.
-
-## 4. Package as a Windows .exe
-
+### 4. Package as a Windows installer (optional)
 ```bash
-cd frontend
 npm run dist
 ```
+Produces `frontend/dist/Luna Setup <version>.exe`. Note: this only packages the Electron shell — Ollama and the Python backend still need to be running separately.
 
-This uses `electron-builder` (config already in `package.json`) to produce
-an installer under `frontend/dist/`. The Python backend is NOT bundled into
-the .exe in this version — for the hackathon demo, run the backend
-separately alongside the packaged app (or note in your demo that this is a
-known next step, not yet automated).
+## Usage
+
+Example commands you can type or speak:
+```
+what time is it in UAE
+open notepad
+reminder in 10 minutes
+lookup intel i7 price
+mark reminder as done
+what's on my schedule
+create a plan for learning FastAPI and add it to my schedule
+```
+
+Every action that touches your system shows a confirmation dialog before running — nothing executes silently.
+
+## Configuration
+
+**Email reminders** (Settings tab): for Gmail, generate an [App Password](https://myaccount.google.com/apppasswords) — your normal password won't work with SMTP. Use the **Send Test Email** button to confirm setup immediately.
+
+**Voice replies**: toggle "Speak Luna's responses aloud" in Settings.
+
+## Design Decisions
+
+- **Deterministic-first, LLM-second.** Anything with a factual, checkable answer (current time, schedule contents, completed items) is answered from real code/data, never from the LLM. Small local models will confidently fabricate plausible-sounding answers rather than admit uncertainty — routing factual queries away from the model entirely is more reliable than trying to prompt that behavior away.
+- **Confirm before executing.** Every action that opens an app, touches a file, or reaches the internet requires explicit per-action approval — there's no "trust mode."
+- **Structured output for plan generation.** When the LLM needs to produce something actionable (a multi-step study plan), it's constrained to strict JSON rather than left to describe a plan in prose that nothing then acts on.
+
+## Known Limitations
+
+- Compound commands ("open WhatsApp and text mom") only execute the first clear action — Luna can launch apps, not operate inside them.
+- Plan generation only works as a single combined command; a follow-up like "now add those to my schedule" referring to an earlier message won't work, since the rule-based layer has no memory of prior turns.
+- The SMTP app password is stored in plaintext in the local SQLite file — acceptable for a personal/demo setup, not something to harden further without moving to OS-level credential storage.
+- File search does an unindexed filesystem walk, capped at 20 results — fine for a demo, slow on very large drives.
+- The packaged `.exe` bundles only the Electron shell; Ollama and the Python backend must be started separately.
+- Web search depends on scraping DuckDuckGo's HTML/lite endpoints (no official API), which can change or start blocking requests without notice.
+
+## Roadmap
+
+- [ ] Browser search automation — open the actual browser to a live results page
+- [ ] MCP (Model Context Protocol) client architecture, replacing hand-written per-tool wrappers with standardized tool servers
+- [ ] WhatsApp messaging via WhatsApp Web automation (personal-use only — no official API exists for this use case; voice calling automation is out of scope entirely)
+- [ ] Bundle the Python backend into the packaged executable
 
 ## Troubleshooting
 
-**`ModuleNotFoundError` for a package (e.g. `apscheduler`) even though you
-installed requirements.txt before:** you likely installed it into a
-different Python environment than the one uvicorn is running in. If you're
-using Anaconda, make sure you `pip install -r requirements.txt` **inside the
-same activated environment** you use to run `uvicorn` — e.g.:
-```bash
-conda activate Luna
-cd backend
-pip install -r requirements.txt
-uvicorn app:app --reload --port 8000
-```
+**`ModuleNotFoundError` after installing requirements** — you likely installed into a different Python environment than the one running uvicorn. Activate the same environment for both steps.
 
-**The Electron window looks stuck / onboarding never progresses:** this
-almost always means the backend isn't actually running (crashed on
-startup, wrong port, etc.), so the UI's fetch calls to `localhost:8000` are
-failing silently. Check the backend terminal for a traceback first. The UI
-now shows a red banner at the top with a "Retry" button when it can't reach
-the backend, instead of hanging silently.
+**UI hangs on launch** — almost always means the backend isn't running; check its terminal for a traceback. Luna's UI shows a banner with a Retry button when it can't reach the backend.
 
-**`'electron-builder' is not recognized`:** it didn't actually get
-installed even though it's in `package.json`. Run:
-```bash
-npm install --save-dev electron-builder
-```
-then `npm run dist` again.
-
-**`The system cannot find the file <app name>`:** this is `open_app`
-correctly reporting that Windows doesn't recognize that name — not a bug.
-Use the exact executable name (e.g. `brave.exe`) or however the app is
-registered with `start`.
-
-## What works end-to-end right now
-
-- Onboarding (name, assistant name, theme) → saved to SQLite
-- Streaming chat with a local model through Ollama
-- **Time queries**: "what time is it" / "what time is it in UAE" answer
-  instantly from Python's `datetime`/`zoneinfo` (stdlib, no dependency) —
-  deliberately bypassing the LLM entirely. Small local models can hallucinate
-  odd non-answers (e.g. inventing a "privacy restriction" that doesn't exist
-  in this codebase) when asked something factual they have no way to know;
-  anything with a deterministic answer should be intercepted before it
-  reaches the model, not prompted around.
-- **Plan generation → real schedule items**: "create a plan for learning
-  FastAPI and add it to my schedule" now actually works — the LLM is asked
-  for strict JSON (title + time offset per item), which the backend parses
-  and inserts as real rows via the same schedule system as everything else.
-  Verified with a mocked model response, including one that added markdown
-  code fences around the JSON (small models often do this despite being told
-  not to) — the fence-stripping logic handles it correctly.
-  **Known limitation:** this only works as a single combined command. A
-  separate follow-up like "now add those to my schedule" referring to an
-  earlier chat message won't work — the rule-based system has no memory of
-  "those," since it doesn't re-read prior turns. If you want that follow-up
-  pattern to work, phrase the whole request in one message.
-- **Fuzzy "mark X as done" matching**: now strips filler words ("the", "a",
-  "my") before matching, so "mark the reminder as done" correctly finds an
-  item titled just "Reminder".
-- **"What's been marked done" queries** now answer from the real schedule
-  database instead of the LLM — previously the model fabricated a
-  plausible-sounding but entirely fictional history of "completed" items.
-  Any question about the user's own stored data should never reach the LLM;
-  it has no access to that data and will confabulate rather than say so.
-- Relative-time reminders now accept more phrasings ("in 5 minutes",
-  "remind me to X in 5 minutes", "set a reminder in 5 minutes", bare
-  "reminder in 5 minutes") — parsed deterministically, no LLM involved.
-- **Compound "open X and Y" commands**: `open_app` now stops at "and" (e.g.
-  "open whatsapp and text mom" opens WhatsApp only). Luna can launch apps but
-  can't yet operate inside them — the confirmation message says so explicitly
-  rather than silently dropping the second half of the request.
-- **Web search reliability**: switched to GET with realistic browser headers
-  and a `lite.duckduckgo.com` fallback if the main endpoint 403s. Failures now
-  return the actual status code + a snippet of the response body instead of
-  a bare error, to make future debugging faster. Not verified end-to-end from
-  this environment (DuckDuckGo isn't reachable from the sandbox used to build
-  this) — test on your machine and report back what the diagnostic shows if
-  it still fails.
-- Rule-based task detection for: opening apps, searching files, creating
-  notes/reminders — each gated behind an explicit Allow/Deny modal
-- **Schedule + email reminders**: say "schedule team meeting at 5:00 PM" (or
-  add it from the Schedule tab). A background job checks every 60 seconds
-  and emails you 5 minutes before it's due, via SMTP (configure in Settings).
-- **Mark as done**: say "mark team meeting as done" in chat, or click
-  "Mark Done" in the Schedule tab. Runs immediately — no confirmation modal,
-  since it's a non-destructive, explicitly user-issued update to your own data.
-- **Web search**: say "search the web for X" or "look up X" — the one
-  feature that intentionally leaves your machine, since no local model has
-  live internet data. Uses DuckDuckGo's HTML endpoint, no API key needed.
-- Memory dashboard: view and delete individual stored preferences
-- Privacy dashboard: activity log + "Delete All My Data"
-- Settings: assistant name, theme, response length preference, email/SMTP config
-
-## Setting up email reminders
-
-1. If using Gmail: turn on 2-Step Verification, then generate an **App
-   Password** at https://myaccount.google.com/apppasswords (your normal
-   Gmail password will NOT work here — Google blocks that for SMTP apps).
-2. In Luna's Settings tab, enter your email and the app password, and
-   optionally a different "send reminders to" address.
-3. Schedule something with a due time in the next few minutes to test it,
-   and watch the Privacy tab's activity log for `reminder_emailed` or
-   `reminder_email_failed` entries.
-
-**Known limitation:** the app password is stored in plaintext in the local
-SQLite file (`backend/db/luna.db`). Acceptable for a hackathon demo on your
-own machine — flag it in your demo video rather than let it look like an
-oversight. If you want to harden this later, look into the OS keychain
-(`keytar` on the Electron side, or Windows Credential Manager) instead of
-storing it in SQLite.
-
-## Known gaps to fill before a polished demo
-
-- `search_file` does a bounded filesystem walk — fine for a demo, but slow
-  on very large drives; consider indexing (e.g. `es`/Everything CLI on
-  Windows) if you have time.
-- Response-length setting is stored but not yet wired into the prompt sent
-  to Ollama — pass it into `SYSTEM_PROMPT` in `ai.py` if you want it to
-  actually change output length.
-- Time parsing for scheduling uses `dateutil`'s fuzzy parser — it handles
-  "5:00 PM", "tomorrow 9am", etc. reasonably well but isn't perfect. If a
-  scheduled time comes out wrong, rephrase more explicitly.
-- No true voice input yet — "mark X as done" works as a typed/chat command,
-  not spoken. Adding speech-to-text (e.g. a local Whisper.cpp build) would
-  be a reasonable next step and was intentionally left out to keep this
-  version's dependencies lightweight for an 8GB/i3 target.
-- No packaging story yet for bundling Python + Ollama inside the .exe —
-  today it's three processes (Ollama, backend, Electron) run separately.
+**`electron-builder` not recognized** — run `npm install --save-dev electron-builder` explicitly.
